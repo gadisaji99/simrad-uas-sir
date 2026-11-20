@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIMRAD – Dashboard Radiologi</title>
+<style>
+/* Palet mode gelap (B5). Kontras teks dan komponen sudah dihitung di Deliverable B5. */
+:root{
+  --bg:#0F1216; --surface:#171B21; --surface2:#1E242C; --line:#2A313A; --outline:#667080;
+  --text:#E6E9ED; --muted:#9AA3AE; --accent:#4C8DFF; --cito:#FF5C5C; --warn:#F5B342; --ok:#3DD68C;
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header{display:flex;align-items:center;gap:16px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--line)}
+header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+header .sp{flex:1}
+header .who{color:var(--muted);font-size:14px}
+main{padding:20px 24px;max-width:1280px;margin:0 auto}
+button{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--outline);border-radius:8px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--text)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:#0F1216;border-color:var(--accent);font-weight:600}
+button.danger{background:var(--cito);color:#0F1216;border-color:var(--cito);font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.small{padding:4px 10px;font-size:13px}
+input,select,textarea{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--outline);border-radius:8px;padding:7px 10px;width:100%}
+label{display:block;color:var(--muted);font-size:13px;margin:12px 0 4px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h3{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.card .big{font-size:28px;font-weight:650}
+.card .sub{color:var(--muted);font-size:13px;margin-top:4px}
+.tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12px;font-weight:650;border:1px solid currentColor}
+.tag.ok{color:var(--ok)} .tag.warn{color:var(--warn)} .tag.cito{color:var(--cito)} .tag.mut{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;display:inline-flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.cito{background:var(--cito)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+.toolbar input,.toolbar select{width:auto;min-width:150px}
+.toolbar input[type=search]{min-width:300px}
+.toolbar .sp{flex:1}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+tbody tr{cursor:pointer} tbody tr:hover{background:var(--surface2)}
+tbody tr.sel{background:#1B2A44}
+.acts{display:flex;gap:6px}
+.msg{padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:var(--muted)}
+.err{color:var(--cito);font-size:14px;margin-top:10px;min-height:1.2em}
+.detail{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.detail h2{margin:0 0 8px;font-size:16px}
+.detail dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0 0 12px}
+.detail dt{color:var(--muted)}
+.detail ol{margin:0;padding-left:20px;color:var(--muted)}
+.detail ol b{color:var(--text);font-weight:600}
+dialog{background:var(--surface);color:var(--text);border:1px solid var(--outline);border-radius:14px;padding:20px;width:min(520px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog h2{margin:0 0 4px;font-size:18px}
+dialog .row{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+dialog.wide{width:min(960px,95vw)}
+dialog .tw{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}
+.login{max-width:360px;margin:12vh auto}
+.login h2{margin:0 0 4px}
+.login p{color:var(--muted);margin:0 0 12px}
+.check{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--text)}
+.check input{width:auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>SIMRAD</h1><span class="who" id="subtitle">Sistem Informasi Radiologi · RSUD Bina Sehat</span>
+  <span class="sp"></span><span class="who" id="who"></span>
+  <button id="btnLogout" hidden>Keluar</button>
+</header>
+<main id="app"></main>
+
+<script>
+"use strict";
+/* ---------- util ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) e.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return e;                                  // teks selalu lewat createTextNode: aman dari XSS
+}
+const fmt1 = n => n == null ? '-' : Number(n).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+async function api(route, { method = 'GET', body, params = {} } = {}) {
+  const qs = new URLSearchParams({ r: route, ...params });
+  const res = await fetch('api.php?' + qs, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  let data; try { data = await res.json(); } catch { data = { error: { pesan: 'Respons server tidak valid.' } }; }
+  if (!res.ok) throw Object.assign(new Error(data.error?.pesan || 'Terjadi kesalahan.'), { status: res.status, kode: data.error?.kode });
+  return data;
+}
+
+/* ---------- state ---------- */
+const S = { user: null, orders: [], metrics: null, modalities: [], pacsOnline: true, filter: { status: '', prioritas: '', q: '' }, selected: null, timer: null };
+const STATUS = ['ORDERED', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'REPORTED'];
+const app = $('#app');
+
+/* ---------- dialog (aksi dengan konfirmasi = pencegahan galat, B5) ---------- */
+function dialog({ title, intro, body, buttons, lebar }) {
+  const err = el('div', { class: 'err', role: 'alert' });
+  const dlg = el('dialog', { class: lebar ? 'wide' : '' }, el('h2', {}, title), intro ? el('div', { style: 'color:var(--muted)' }, intro) : null, body || null, err);
+  const row = el('div', { class: 'row' });
+  const all = [];
+  for (const b of buttons) {
+    const btn = el('button', { class: b.kind || '', type: 'button' }, b.label);
+    btn.addEventListener('click', async () => {
+      if (!b.run) return dlg.close();
+      all.forEach(x => x.disabled = true); err.textContent = '';
+      try { const hasil = await b.run(); dlg.close(); await refresh(); if (b.after) b.after(hasil); }
+      catch (e) { err.textContent = e.message; all.forEach(x => x.disabled = false); }
+    });
+    all.push(btn); row.append(btn);
+  }
+  dlg.append(row);
+  dlg.addEventListener('close', () => dlg.remove());
+  document.body.append(dlg); dlg.showModal();
+  return dlg;
+}
+const field = (label, node) => el('div', {}, el('label', {}, label), node);
+
+/* ---------- login ---------- */
+function showLogin(msg) {
+  S.user = null; clearInterval(S.timer);
+  $('#who').textContent = ''; $('#btnLogout').hidden = true;
+  const u = el('input', { id: 'u', autocomplete: 'username', required: true });
+  const p = el('input', { id: 'p', type: 'password', autocomplete: 'current-password', required: true });
+  const err = el('div', { class: 'err', role: 'alert' }, msg || '');
+  const f = el('form', { class: 'login' }, el('h2', {}, 'Masuk'), el('p', {}, 'Gunakan akun yang diberikan administrator.'),
+    field('Nama pengguna', u), field('Kata sandi', p), err, el('div', { class: 'row' }, el('button', { class: 'primary', type: 'submit' }, 'Masuk')));
+  f.addEventListener('submit', async ev => {
+    ev.preventDefault(); err.textContent = '';
+    try { await api('login', { method: 'POST', body: { username: u.value.trim(), password: p.value } }); await start(); }
+    catch (e) { err.textContent = e.message; }
+  });
+  app.replaceChildren(f); u.focus();
+}
+
+/* ---------- data ---------- */
+async function loadAll() {
+  const reqs = [api('metrics'), api('modalities'), api('pacs.status')];
+  if (S.user.role !== 'ADMIN_TI') {
+    const prm = {}; if (S.filter.status) prm.status = S.filter.status; if (S.filter.prioritas) prm.prioritas = S.filter.prioritas; if (S.filter.q) prm.q = S.filter.q;
+    reqs.push(api('orders', { params: prm }));
+  }
+  const [m, mo, pc, o] = await Promise.all(reqs);
+  S.metrics = m; S.modalities = mo.data; S.pacsOnline = pc.online; S.orders = o ? o.data : [];
+}
+async function refresh() { try { await loadAll(); render(); if (S.selected) await showDetail(S.selected, true); } catch (e) { if (e.status === 401) showLogin('Sesi berakhir. Silakan masuk lagi.'); } }
+
+/* ---------- komponen tampilan ---------- */
+function kpiCards() {
+  const m = S.metrics, c = [];
+  for (const p of ['CITO', 'REGULER']) {
+    const t = m.tat[p], ada = t.jumlah_selesai > 0;
+    const lulus = ada && t.rata_menit < t.target_menit;
+    c.push(el('div', { class: 'card' }, el('h3', {}, 'TAT ' + (p === 'CITO' ? 'CITO' : 'Reguler') + ' (rata-rata)'),
+      el('div', { class: 'big' }, ada ? fmt1(t.rata_menit) + ' mnt' : 'Belum ada data'),
+      ada ? el('div', { class: 'sub' }, el('span', { class: 'tag ' + (lulus ? 'ok' : 'warn') }, lulus ? 'Dalam target' : 'Melewati target'), ' target < ' + t.target_menit + ' mnt · ' + fmt1(t.persen_dalam_target) + '% dalam target · ' + t.jumlah_selesai + ' selesai')
+          : el('div', { class: 'sub' }, 'Target < ' + t.target_menit + ' mnt')));
+  }
+  c.push(el('div', { class: 'card' }, el('h3', {}, 'Order per status'),
+    el('div', { class: 'sub', style: 'display:flex;flex-wrap:wrap;gap:6px;margin-top:2px' }, STATUS.map(s => el('span', { class: 'tag mut' }, s.replace('_', ' ') + ' ' + m.per_status[s])))));
+  const l = m.terbuka_lewat_target, n = l.CITO + l.REGULER;
+  c.push(el('div', { class: 'card' }, el('h3', {}, 'Order terbuka melewati target'),
+    el('div', { class: 'big' }, String(n)), el('div', { class: 'sub' }, el('span', { class: 'tag ' + (n ? 'cito' : 'ok') }, n ? 'Perlu perhatian' : 'Aman'), ' CITO ' + l.CITO + ' · Reguler ' + l.REGULER)));
+  return el('div', { class: 'cards' }, c);
+}
+function modalityChips() {
+  const map = { ONLINE: 'ok', PERLU_CEK: 'warn', OFFLINE: 'cito' };
+  const alat = S.modalities.map(m => el('span', { class: 'chip' }, el('span', { class: 'dot ' + map[m.status] }), m.kode_alat + ' · ' + m.status.replace('_', ' ')));
+  alat.push(el('span', { class: 'chip', id: 'chipPacs' }, el('span', { class: 'dot ' + (S.pacsOnline ? 'ok' : 'cito') }), 'PACS (simulasi) · ' + (S.pacsOnline ? 'ONLINE' : 'OFFLINE')));
+  if (S.user.role === 'ADMIN_TI') alat.push(el('button', { class: 'small', id: 'btnPacs', onclick: ubahPacs }, S.pacsOnline ? 'Simulasikan PACS mati' : 'Nyalakan PACS simulasi'));
+  return el('div', { class: 'chips', 'aria-label': 'Status alat dan PACS' }, alat);
+}
+function actionsFor(o) {
+  const r = S.user.role, a = [];
+  if (r === 'RADIOGRAFER') {
+    if (o.status === 'ORDERED') a.push(['Jadwalkan', () => jadwalkan(o)]);
+    if (o.status === 'SCHEDULED') a.push(['Mulai', () => mulai(o)]);
+    if (o.status === 'IN_PROGRESS') a.push(['Selesai', () => selesai(o)]);
+    if (o.pacs_status === 'PACS_SEND_FAILED') a.push(['Kirim ulang PACS', () => kirimUlang(o)]);
+  }
+  if (r === 'RADIOLOG' && (o.status === 'COMPLETED' || o.status === 'REPORTED')) a.push([o.status === 'REPORTED' ? 'Addendum' : 'Laporan', () => laporan(o)]);
+  if ((r === 'DOKTER' || r === 'RADIOLOG') && o.prioritas !== 'CITO' && o.status !== 'REPORTED') a.push(['Tandai CITO', () => tandaiCito(o)]);
+  return a;
+}
+function worklist() {
+  const f = S.filter;
+  const q = el('input', { type: 'search', placeholder: 'Cari nama, no. RM, atau no. akses', value: f.q, 'aria-label': 'Cari' });
+  const st = el('select', { 'aria-label': 'Filter status' }, el('option', { value: '' }, 'Semua status'), STATUS.map(s => el('option', { value: s, selected: f.status === s }, s)));
+  const pr = el('select', { 'aria-label': 'Filter prioritas' }, el('option', { value: '' }, 'Semua prioritas'), ['CITO', 'REGULER'].map(s => el('option', { value: s, selected: f.prioritas === s }, s)));
+  const apply = () => { S.filter = { q: q.value.trim(), status: st.value, prioritas: pr.value }; refresh(); };
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') apply(); }); st.addEventListener('change', apply); pr.addEventListener('change', apply);
+  const bar = el('div', { class: 'toolbar' }, q, st, pr, el('button', { class: 'small', onclick: apply }, 'Terapkan'), el('span', { class: 'sp' }),
+    ['DOKTER', 'RADIOGRAFER'].includes(S.user.role) ? el('button', { id: 'btnPasien', onclick: registrasiPasien }, 'Registrasi pasien') : null,
+    S.user.role === 'RADIOGRAFER' ? el('button', { id: 'btnMwl', onclick: tampilMwl }, 'Modality Worklist') : null,
+    S.user.role === 'DOKTER' ? el('button', { class: 'primary', id: 'btnNew', onclick: orderBaru }, 'Order baru') : null,
+    el('button', { class: 'small', onclick: () => refresh() }, 'Muat ulang'));
+  const rows = S.orders.map(o => {
+    const act = actionsFor(o);
+    const tr = el('tr', { class: S.selected === o.order_id ? 'sel' : '', 'data-id': o.order_id },
+      el('td', {}, el('span', { class: 'tag ' + (o.prioritas === 'CITO' ? 'cito' : 'mut') }, o.prioritas)),
+      el('td', {}, o.accession_no), el('td', {}, o.pasien + ' (' + o.no_rm + ')'), el('td', {}, o.nama_pemeriksaan),
+      el('td', {}, el('span', { class: 'tag mut' }, o.status.replace('_', ' ')), o.pacs_status ? [' ', el('span', { class: 'tag ' + (o.pacs_status === 'SENT_TO_PACS' ? 'ok' : 'warn') }, o.pacs_status === 'SENT_TO_PACS' ? 'PACS ok' : 'PACS gagal')] : null), el('td', {}, o.menit_berjalan + ' mnt'),
+      el('td', {}, el('div', { class: 'acts' }, act.map(([l, fn]) => el('button', { class: 'small', onclick: ev => { ev.stopPropagation(); fn(); } }, l)))));
+    tr.addEventListener('click', () => showDetail(o.order_id));
+    return tr;
+  });
+  const table = S.orders.length
+    ? el('div', { class: 'tablewrap' }, el('table', {}, el('thead', {}, el('tr', {}, ['Prioritas', 'No. akses', 'Pasien', 'Pemeriksaan', 'Status', 'Berjalan', 'Aksi'].map(h => el('th', {}, h)))), el('tbody', {}, rows)))
+    : el('div', { class: 'msg' }, 'Tidak ada order yang cocok dengan filter.');
+  return el('div', {}, bar, table, el('div', { id: 'detail' }));
+}
+function render() {
+  const nodes = [kpiCards(), modalityChips()];
+  nodes.push(S.user.role === 'ADMIN_TI' ? el('div', { class: 'msg' }, 'Peran Admin TI tidak membuka data klinis pasien. Indikator di atas bersifat agregat dan tanpa identitas.') : worklist());
+  app.replaceChildren(...nodes);
+}
+
+/* ---------- detail order + jejak audit ---------- */
+async function showDetail(id, senyap) {
+  S.selected = id;
+  document.querySelectorAll('tbody tr').forEach(t => t.classList.toggle('sel', t.dataset.id == id));
+  const box = $('#detail'); if (!box) return;
+  try {
+    const d = await api('orders.detail', { params: { id } });
+    box.replaceChildren(el('div', { class: 'detail' }, el('h2', {}, d.accession_no + ' · ' + d.pasien),
+      el('dl', {}, el('dt', {}, 'No. RM'), el('dd', {}, d.no_rm), el('dt', {}, 'Pemeriksaan'), el('dd', {}, d.nama_pemeriksaan),
+        el('dt', {}, 'Prioritas'), el('dd', {}, d.prioritas), el('dt', {}, 'Status'), el('dd', {}, d.status),
+        d.study ? [el('dt', {}, 'UID studi'), el('dd', {}, d.study.study_instance_uid)] : null,
+        d.pacs ? [el('dt', {}, 'PACS (simulasi)'), el('dd', {}, d.pacs.di_pacs + ' dari ' + d.pacs.di_ris + ' instance diterima' + (d.pacs.lengkap ? ' (lengkap)' : ' (BELUM lengkap)'))] : null),
+      d.laporan.length ? el('div', {}, el('b', {}, 'Laporan'), d.laporan.map(l => el('p', { style: 'margin:4px 0 8px' }, '[' + l.jenis + ' · ' + l.status + '] ' + (l.isi_temuan ? l.isi_temuan + ' → ' : '') + l.kesimpulan))) : null,
+      el('b', {}, 'Jejak audit'), el('ol', {}, d.jejak_audit.map(e => el('li', {}, el('b', {}, e.jenis_event), ' · ' + e.aktor + ' · ' + e.event_at)))));
+  } catch (e) { if (!senyap) box.replaceChildren(el('div', { class: 'msg' }, e.message)); }
+}
+
+/* ---------- aksi ---------- */
+const post = (route, body) => api(route, { method: 'POST', body });
+function jadwalkan(o) {
+  dialog({ title: 'Jadwalkan pemeriksaan', intro: o.nama_pemeriksaan + ' untuk ' + o.pasien + '.', buttons: [{ label: 'Batal' }, { label: 'Jadwalkan', kind: 'primary', run: () => post('orders.schedule', { order_id: o.order_id }) }] });
+}
+function mulai(o) {
+  const cocok = S.modalities.filter(m => m.jenis === o.jenis_modalitas);
+  const sel = el('select', {}, cocok.map(m => el('option', { value: m.modality_id, disabled: m.status === 'OFFLINE' }, m.kode_alat + ' – ' + m.lokasi + ' (' + m.status.replace('_', ' ') + ')')));
+  dialog({ title: 'Mulai pemeriksaan', intro: o.nama_pemeriksaan + ' · alat ' + o.jenis_modalitas + '. Alat OFFLINE tidak dapat dipilih.', body: field('Alat', sel),
+    buttons: [{ label: 'Batal' }, { label: 'Mulai', kind: 'primary', run: () => post('orders.start', { order_id: o.order_id, modality_id: Number(sel.value) }) }] });
+}
+function selesai(o) {
+  const n = el('input', { type: 'number', min: 1, max: 2000, value: 1 });
+  const bp = el('input', { maxlength: 30, placeholder: 'mis. KEPALA' });
+  const ok = el('input', { type: 'checkbox', checked: true, id: 'okq' });
+  const btn = { label: 'Selesaikan', kind: 'primary', run: () => post('studies.complete', { study_id: o.study_id, jumlah_instance: Number(n.value), kualitas_baik: ok.checked, body_part: bp.value }) };
+  const dlg = dialog({ title: 'Selesaikan pemeriksaan', intro: 'Citra pada prototipe ini disimulasikan; hanya jumlahnya yang dicatat.',
+    body: el('div', {}, field('Jumlah citra (instance)', n), field('Bagian tubuh', bp), el('label', { class: 'check', for: 'okq' }, ok, 'Kualitas citra baik')), buttons: [{ label: 'Batal' }, btn] });
+  const target = [...dlg.querySelectorAll('button')].pop();
+  ok.addEventListener('change', () => { target.textContent = ok.checked ? 'Selesaikan' : 'Ulangi pengambilan'; });
+}
+function laporan(o) {
+  const isi = el('textarea', { rows: 4 }), kes = el('textarea', { rows: 3 });
+  const baru = o.status === 'REPORTED';
+  dialog({ title: baru ? 'Tambah addendum' : 'Tulis laporan', intro: o.nama_pemeriksaan + ' · ' + o.pasien + '. Laporan final tidak dapat diubah; koreksi dilakukan lewat addendum.',
+    body: el('div', {}, field('Temuan', isi), field('Kesimpulan (wajib untuk final dan addendum)', kes)),
+    buttons: [{ label: 'Batal' }, baru ? null : { label: 'Simpan draft', run: () => post('reports.save', { study_id: o.study_id, isi_temuan: isi.value, kesimpulan: kes.value, finalize: false }) },
+      { label: baru ? 'Simpan addendum' : 'Finalkan', kind: 'primary', run: () => post('reports.save', { study_id: o.study_id, isi_temuan: isi.value, kesimpulan: kes.value, finalize: true }) }].filter(Boolean) });
+}
+function tandaiCito(o) {
+  dialog({ title: 'Tandai sebagai CITO?', intro: 'Prioritas ' + o.pasien + ' (' + o.accession_no + ') akan diubah menjadi CITO dan tercatat di log audit. Perubahan ini tidak dapat dikembalikan.',
+    buttons: [{ label: 'Batal' }, { label: 'Ya, tandai CITO', kind: 'danger', run: () => post('orders.cito', { order_id: o.order_id }) }] });
+}
+async function orderBaru() {
+  const prs = (await api('procedures')).data;
+  const cari = el('input', { type: 'search', placeholder: 'Ketik nama atau no. RM, lalu Enter' });
+  const pas = el('select', { size: 5 });
+  const pem = el('select', {}, prs.map(p => el('option', { value: p.procedure_id }, p.kode + ' – ' + p.nama_pemeriksaan)));
+  const pri = el('select', {}, el('option', { value: 'REGULER' }, 'REGULER'), el('option', { value: 'CITO' }, 'CITO'));
+  async function muat() { const r = await api('patients', { params: { q: cari.value.trim() } }); pas.replaceChildren(...r.data.map(p => el('option', { value: p.patient_id }, p.nama + ' (' + p.no_rm + ')'))); }
+  cari.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); muat(); } });
+  await muat();
+  dialog({ title: 'Order pemeriksaan baru', body: el('div', {}, field('Pasien', cari), pas, field('Pemeriksaan', pem), field('Prioritas', pri)),
+    buttons: [{ label: 'Batal' }, { label: 'Kirim order', kind: 'primary', run: async () => { if (!pas.value) throw new Error('Pilih pasien terlebih dahulu.'); await post('orders.create', { patient_id: Number(pas.value), procedure_id: Number(pem.value), prioritas: pri.value }); } }] });
+}
+
+/* ---------- registrasi pasien, MWL, PACS ---------- */
+function registrasiPasien() {
+  const nama = el('input', { maxlength: 100, autocomplete: 'off' }), lahir = el('input', { type: 'date' });
+  const jk = el('select', {}, el('option', { value: '' }, 'Pilih...'), el('option', { value: 'L' }, 'Laki-laki (L)'), el('option', { value: 'P' }, 'Perempuan (P)'));
+  const nik = el('input', { maxlength: 16, inputmode: 'numeric', placeholder: 'opsional, 16 digit' }), rm = el('input', { maxlength: 20, placeholder: 'kosongkan agar dibuat otomatis' });
+  dialog({ title: 'Registrasi pasien baru', intro: 'Data pasien pada prototipe ini fiktif. Nomor RM dibuat otomatis bila dikosongkan.',
+    body: el('div', {}, field('Nama lengkap', nama), field('Tanggal lahir', lahir), field('Jenis kelamin', jk), field('NIK', nik), field('Nomor RM', rm)),
+    buttons: [{ label: 'Batal' }, { label: 'Daftarkan', kind: 'primary',
+      run: () => post('patients.create', { nama: nama.value, tanggal_lahir: lahir.value, jenis_kelamin: jk.value, nik: nik.value, no_rm: rm.value }),
+      after: r => dialog({ title: 'Pasien terdaftar', intro: r.nama + ' terdaftar dengan nomor RM ' + r.no_rm + '.', buttons: [{ label: 'Tutup', kind: 'primary' }] }) }] });
+}
+async function tampilMwl() {
+  let r; try { r = await api('mwl.daftar'); } catch (e) { return dialog({ title: 'Modality Worklist', intro: e.message, buttons: [{ label: 'Tutup' }] }); }
+  const kol = ['Accession', 'Patient ID', 'Patient Name', 'Modality', 'Prosedur', 'AE Title', 'Mulai'];
+  const baris = r.data.map(x => { const d = x.dicom, s = d['(0040,0100) ScheduledProcedureStepSequence'][0], t = s['(0040,0003) ScheduledProcedureStepStartTime'], dt = s['(0040,0002) ScheduledProcedureStepStartDate'];
+    return el('tr', {}, [x.accession_no + (x.prioritas === 'CITO' ? ' (CITO)' : ''), d['(0010,0020) PatientID'], d['(0010,0010) PatientName'], s['(0008,0060) Modality'], d['(0040,1001) RequestedProcedureID'], s['(0040,0001) ScheduledStationAETitle'],
+      dt.slice(6) + '/' + dt.slice(4, 6) + ' ' + t.slice(0, 2) + ':' + t.slice(2, 4)].map(c => el('td', {}, c))); });
+  dialog({ title: 'Modality Worklist (simulasi C-FIND)', intro: r.jumlah + ' order berstatus SCHEDULED, ditampilkan dengan atribut DICOM.', lebar: true,
+    body: baris.length ? el('div', { class: 'tw' }, el('table', {}, el('thead', {}, el('tr', {}, kol.map(k => el('th', {}, k)))), el('tbody', {}, baris))) : el('div', { class: 'msg', style: 'margin-top:12px' }, 'Tidak ada order SCHEDULED.'),
+    buttons: [{ label: 'Tutup', kind: 'primary' }] });
+}
+function kirimUlang(o) {
+  dialog({ title: 'Kirim ulang ke PACS', intro: 'Citra ' + o.accession_no + ' belum berhasil dikirim ke PACS. Kirim ulang sekarang? Pengiriman ulang aman: citra yang sudah ada tidak digandakan.',
+    buttons: [{ label: 'Batal' }, { label: 'Kirim ulang', kind: 'primary', run: async () => { const r = await post('studies.kirim_ulang', { study_id: o.study_id }); if (r.pacs === 'gagal') throw new Error('PACS masih offline. Studi tetap aman dan dapat dikirim ulang nanti.'); } }] });
+}
+function ubahPacs() {
+  const mati = S.pacsOnline;
+  dialog({ title: mati ? 'Simulasikan PACS mati?' : 'Nyalakan PACS simulasi?', intro: mati ? 'Selama PACS mati, pengiriman citra akan gagal dan dicatat; studi tidak hilang dan dapat dikirim ulang oleh radiografer.' : 'Pengiriman citra akan kembali berjalan.',
+    buttons: [{ label: 'Batal' }, { label: mati ? 'Matikan PACS simulasi' : 'Nyalakan', kind: mati ? 'danger' : 'primary', run: () => post('pacs.set', { online: !mati }) }] });
+}
+
+/* ---------- mulai ---------- */
+async function start() {
+  try { S.user = (await api('me')).pengguna; } catch { return showLogin(); }
+  $('#who').textContent = S.user.nama + ' · ' + S.user.role; $('#btnLogout').hidden = false;
+  await refresh();
+  clearInterval(S.timer); S.timer = setInterval(refresh, 30000);
+}
+$('#btnLogout').addEventListener('click', async () => { try { await api('logout', { method: 'POST' }); } catch {} S.selected = null; showLogin(); });
+start();
+</script>
+</body>
+</html>
