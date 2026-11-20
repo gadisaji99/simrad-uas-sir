@@ -1,0 +1,8 @@
+=== Uji beban multi-pengguna SIMRAD: 2026-11-20 05:35:54 ===
+Lingkungan: Darwin; PHP 8.2.4; target http://localhost/simrad/public/api.php
+Pengguna serentak: 20 (sesi berbeda, dokter d001-d020); putaran: 20; permintaan per pengguna: 20; total: 400; durasi total: 1.17 detik
+endpoint      jumlah   gagal rerata(ms)   p50(ms)   p95(ms)  maks(ms)
+orders           200       0       39.4       8.4      13.5     912.6
+metrics          200       0       46.0      10.3      22.7     917.2
+semua            400       0       42.7       9.7      20.5     917.2
+
