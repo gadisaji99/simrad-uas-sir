@@ -17,6 +17,25 @@ Prasyarat: **XAMPP** dengan PHP 8.1 atau lebih baru (diuji PHP 8.2.4 dan MariaDB
 
 **Bila gagal:** halaman 404 berarti nama folder bukan persis `simrad` atau berkas tidak berada di `htdocs/simrad/public/`; `{"error":{"kode":"GALAT_SERVER"...}}` biasanya berarti MySQL belum menyala atau skema belum diimpor; `BELUM_LOGIN` pada alamat `api.php` adalah **normal** (tanda aplikasi hidup).
 
+## Arsitektur
+![Arsitektur SIMRAD: HIS - RIS - PACS](docs/arsitektur.png)
+
+*Kuning = komponen yang disimulasikan; garis putus-putus = jalur yang belum diuji ke sistem nyata.*
+
+SIMRAD adalah aplikasi web tiga lapis: **antarmuka** (satu halaman HTML), **API JSON** (PHP), dan **basis data** (MariaDB). HIS, modalitas, dan PACS **disimulasikan**.
+
+| Lapisan | Berkas | Peran |
+|---|---|---|
+| Antarmuka | `public/index.html` | Dashboard mode gelap untuk dokter, radiografer, radiolog, dan Admin TI; memanggil API. |
+| API | `public/api.php` | Satu pintu masuk (`?r=rute`): validasi masukan, pemeriksaan peran, galat JSON seragam. |
+| Alur kerja | `src/Auth.php`, `src/Workflow.php` | Login (hash kata sandi), aturan status order, hak akses per peran, log audit, kirim ke PACS. |
+| Metrik | `src/Metrics.php` | TAT per prioritas dan per tahap, order yang melewati target. |
+| Integrasi | `src/Integration.php` | Pesan HL7 v2 (ADT, ORM masuk dengan ACK; ORM, ORU keluar), Modality Worklist (simulasi C-FIND), Bundle FHIR R4. |
+| PACS simulasi | `src/Pacs.php` | Meniru C-STORE; dapat dimatikan untuk menguji gagal kirim dan kirim ulang. |
+| Basis data | `db/schema.sql` | 11 tabel (rancangan ERD Deliverable B3) dan 2 tabel simulator PACS. |
+
+**Aliran data utama:** (1) HIS mengirim ADT^A04 dan ORM^O01 ke RIS dan menerima ACK; (2) radiografer menjadwalkan order, yang lalu tampil di Modality Worklist; (3) pemeriksaan selesai, studi dikirim ke PACS simulasi (bila gagal, dicatat dan dapat dikirim ulang); (4) radiolog menulis laporan final; (5) hasil dikirim balik ke HIS sebagai ORU^R01 dan dapat diekspor sebagai Bundle FHIR. Penjelasan lengkap, data dictionary, dan API ada di `docs/Dokumentasi_Teknis_SIMRAD.pdf`.
+
 ## 1. Asal aplikasi dasar dan kontribusi penulis
 - **Aplikasi dasar RIS** (data pasien, worklist, pengiriman MWL, pengecekan PACS Conquest, viewer OHIF) **dikirimkan langsung oleh dosen
   kepada mahasiswa kelas** untuk keperluan tugas ini, dan digunakan dengan persetujuan beliau. Salinan aslinya disimpan **tanpa diubah** di folder `APLIKASI DASAR/`.
@@ -137,7 +156,7 @@ src/                Auth, Workflow (alur kerja), Metrics, Integration (HL7, FHIR
 public/             api.php (API JSON), index.html (dashboard)
 integrasi/          kirim_ke_hapi.php (menyimpan atau mengirim bundle FHIR)
 tests/              run_tests.php, ui_test.js, load_test.sh
-docs/               Dokumentasi_Teknis_SIMRAD.pdf, Panduan_Pengguna_SIMRAD.pdf; hasil_uji.md dan hasil_beban*.txt dibuat oleh pengujian
+docs/               arsitektur.png, Dokumentasi_Teknis_SIMRAD.pdf, Panduan_Pengguna_SIMRAD.pdf; hasil_uji.md dan hasil_beban*.txt dibuat oleh pengujian
 ```
 
 ## 11. Catatan riwayat commit
